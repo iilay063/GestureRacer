@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile config.py camera.py hand_tracker.py gesture_classifier.py laser_tracker.py robot_controller.py utils/visualization.py main.py)"
+    ]
+  }
+}
