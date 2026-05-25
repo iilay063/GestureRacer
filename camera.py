@@ -1,16 +1,38 @@
 """
 CSI camera wrapper.
 
-Uses jetcam's CSICamera, which talks to the Pi Camera through GStreamer.
-cv2.VideoCapture(0) is unreliable on the Jetson Nano - this is the
-supported path.
+Uses an explicit GStreamer pipeline through cv2.VideoCapture. The
+pipeline pulls NV12 frames from nvarguscamerasrc, downscales/converts
+to BGR on the GPU (nvvidconv), then hands off via appsink.
+
+Why not jetcam: jetcam's CSICamera uses an EGL transform stage and a
+background grab thread. On Jetson Nano this races with MediaPipe's GPU
+context and segfaults inside libArgus mid-inference. The appsink
+pipeline is synchronous and EGL-free, which removes that contention.
 """
 
 from typing import Optional
 
+import cv2
 import numpy as np
 
 import config
+
+
+def _gst_pipeline(width: int, height: int, fps: int) -> str:
+    # Capture at a native sensor mode (1280x720@30) then downscale on
+    # the GPU to the target size. nvvidconv is much cheaper than doing
+    # the resize on the CPU.
+    return (
+        "nvarguscamerasrc sensor-id=0 ! "
+        f"video/x-raw(memory:NVMM), width=1280, height=720, "
+        f"format=NV12, framerate={fps}/1 ! "
+        "nvvidconv flip-method=0 ! "
+        f"video/x-raw, width={width}, height={height}, format=BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=BGR ! "
+        "appsink drop=true max-buffers=1 sync=false"
+    )
 
 
 class Camera:
@@ -18,31 +40,27 @@ class Camera:
                  width: int = config.CAMERA_WIDTH,
                  height: int = config.CAMERA_HEIGHT,
                  fps: int = config.CAMERA_FPS):
-        # Lazy import so the module is still importable on a dev laptop
-        # that doesn't have jetcam installed.
-        from jetcam.csi_camera import CSICamera
-        self._camera = CSICamera(width=width, height=height, capture_fps=fps)
-        # Starts jetcam's background grab thread.
-        self._camera.running = True
+        pipeline = _gst_pipeline(width, height, fps)
+        self._cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+        if not self._cap.isOpened():
+            raise RuntimeError(
+                "Could not open CSI camera via GStreamer pipeline. "
+                "Try: sudo systemctl restart nvargus-daemon"
+            )
 
     def read(self) -> Optional[np.ndarray]:
-        """Most recent BGR frame, or None if not available yet."""
-        # Copy because jetcam's background GStreamer thread overwrites this
-        # buffer in place. Without the copy, MediaPipe can read torn frames
-        # mid-inference and segfault.
-        frame = self._camera.value
-        return frame.copy() if frame is not None else None
+        """Most recent BGR frame, or None if the read failed."""
+        ok, frame = self._cap.read()
+        return frame if ok else None
 
     def release(self) -> None:
-        self._camera.running = False
+        self._cap.release()
 
 
 if __name__ == "__main__":
     # Smoke-test: confirm a frame can be grabbed.
-    import time
     cam = Camera()
     print("Warming up camera...")
-    time.sleep(1.0)
     frame = cam.read()
     if frame is None:
         print("No frame received.")

@@ -26,10 +26,14 @@ HAND_TRACKING_CONFIDENCE = 0.5
 # ---------------------------------------------------------------------------
 # Gesture classifier
 # ---------------------------------------------------------------------------
-# A finger counts as "extended" when its tip clears its PIP joint by at
-# least this fraction of the hand's bounding-box height. Scale-invariant
-# so it works the same whether the hand is near or far from the camera.
-FINGER_EXTENDED_MARGIN = 0.02
+# A finger counts as "extended" when its segments (MCP->PIP and PIP->tip)
+# are roughly collinear. We measure this with cosine similarity; a value
+# of 1.0 is perfectly straight, 0.0 is bent at 90 degrees. 0.6 corresponds
+# to roughly 53 degrees of allowed bend - permissive enough that "extended"
+# fingers aren't required to be perfectly straight, strict enough that
+# curled fingers don't sneak through.
+# Rotation-invariant: works regardless of hand orientation in the frame.
+FINGER_STRAIGHTNESS_COS_MIN = 0.6
 
 # ---------------------------------------------------------------------------
 # Robot control

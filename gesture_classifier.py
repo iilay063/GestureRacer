@@ -1,9 +1,10 @@
 """
 Classify a Hand into one of a small vocabulary of gestures.
 
-Rule-based, not learned. Each rule asks which fingers are extended
-relative to their PIP joint. Robust to scale and good enough for five
-well-separated gestures.
+Rule-based, not learned. Each rule asks which fingers are "extended"
+based on whether the MCP->PIP and PIP->tip segments are roughly
+collinear. This is rotation-invariant, so the hand can be held at
+any angle relative to the camera and the classifier still works.
 
 Vocabulary (per CLAUDE.md):
     OPEN_PALM   -> STOP
@@ -29,42 +30,35 @@ class Gesture(Enum):
     POINT = "point"
 
 
-def _hand_height(landmarks: List[Tuple[float, float]]) -> float:
-    ys = [y for _, y in landmarks]
-    return max(ys) - min(ys)
-
-
 def _finger_extended(landmarks: List[Tuple[float, float]],
-                     tip_idx: int,
+                     mcp_idx: int,
                      pip_idx: int,
-                     hand_h: float) -> bool:
-    # Image Y grows downwards, so "tip above pip" means tip_y < pip_y.
-    margin = config.FINGER_EXTENDED_MARGIN * max(hand_h, 1e-6)
-    return landmarks[pip_idx][1] - landmarks[tip_idx][1] > margin
+                     tip_idx: int) -> bool:
+    # Treat the finger as two segments meeting at the PIP joint. When the
+    # finger is straight they point in nearly the same direction (cosine
+    # close to +1). When curled, the tip segment swings around (cosine
+    # drops or even goes negative).
+    v1x = landmarks[pip_idx][0] - landmarks[mcp_idx][0]
+    v1y = landmarks[pip_idx][1] - landmarks[mcp_idx][1]
+    v2x = landmarks[tip_idx][0] - landmarks[pip_idx][0]
+    v2y = landmarks[tip_idx][1] - landmarks[pip_idx][1]
 
-
-def _thumb_extended(landmarks: List[Tuple[float, float]]) -> bool:
-    # The thumb bends sideways, so compare X coordinates instead of Y.
-    # The wrist tells us which side of the hand the thumb is on, which
-    # mirrors for left vs right hands.
-    tip_x = landmarks[4][0]
-    ip_x = landmarks[2][0]
-    wrist_x = landmarks[0][0]
-    if ip_x > wrist_x:
-        return tip_x > ip_x  # right hand seen palm-out
-    return tip_x < ip_x      # left hand mirror
+    mag = ((v1x * v1x + v1y * v1y) ** 0.5) * ((v2x * v2x + v2y * v2y) ** 0.5)
+    if mag < 1e-9:
+        return False
+    cos_angle = (v1x * v2x + v1y * v2y) / mag
+    return cos_angle > config.FINGER_STRAIGHTNESS_COS_MIN
 
 
 def classify(hand: Hand) -> Gesture:
     lm = hand.landmarks
-    hand_h = _hand_height(lm)
 
     extended = {
-        "thumb":  _thumb_extended(lm),
-        "index":  _finger_extended(lm, 8, 6, hand_h),
-        "middle": _finger_extended(lm, 12, 10, hand_h),
-        "ring":   _finger_extended(lm, 16, 14, hand_h),
-        "pinky":  _finger_extended(lm, 20, 18, hand_h),
+        "thumb":  _finger_extended(lm, 2, 3, 4),
+        "index":  _finger_extended(lm, 5, 6, 8),
+        "middle": _finger_extended(lm, 9, 10, 12),
+        "ring":   _finger_extended(lm, 13, 14, 16),
+        "pinky":  _finger_extended(lm, 17, 18, 20),
     }
 
     fingers_up = sum(1 for v in extended.values() if v)
