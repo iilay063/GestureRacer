@@ -73,7 +73,10 @@ def classify(hand: Hand) -> Gesture:
     if (extended["index"] and extended["middle"]
             and not extended["ring"] and not extended["pinky"]):
         return Gesture.PEACE
+    # POINT requires thumb DOWN as well, otherwise a thumbs-up with a
+    # noisy "extended index" landmark falls through to POINT.
     if (extended["index"] and not extended["middle"]
-            and not extended["ring"] and not extended["pinky"]):
+            and not extended["ring"] and not extended["pinky"]
+            and not extended["thumb"]):
         return Gesture.POINT
     return Gesture.UNKNOWN
