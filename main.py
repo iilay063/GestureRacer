@@ -8,7 +8,11 @@ extended absence of any signal, or on any unhandled exception.
 """
 
 import argparse
+import faulthandler
 import time
+
+# Dump a Python traceback to stderr on segfault instead of dying silently.
+faulthandler.enable()
 
 import config
 import laser_tracker

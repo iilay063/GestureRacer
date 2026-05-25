@@ -27,7 +27,11 @@ class Camera:
 
     def read(self) -> Optional[np.ndarray]:
         """Most recent BGR frame, or None if not available yet."""
-        return self._camera.value
+        # Copy because jetcam's background GStreamer thread overwrites this
+        # buffer in place. Without the copy, MediaPipe can read torn frames
+        # mid-inference and segfault.
+        frame = self._camera.value
+        return frame.copy() if frame is not None else None
 
     def release(self) -> None:
         self._camera.running = False
