@@ -71,6 +71,27 @@ class RobotController:
         frac = (config.HAND_SIZE_STOP - size) / span
         return config.FORWARD_THROTTLE * frac
 
+    def execute_voice(self, command: str) -> None:
+        """Drive the robot according to a recognized voice command.
+        Voice commands are open-loop: no camera feedback, just fixed
+        throttle and steering values."""
+        if command == "forward":
+            self._set(config.FORWARD_THROTTLE, 0.0)
+        elif command == "backward":
+            self._set(config.REVERSE_THROTTLE, 0.0)
+        elif command == "spin right":
+            self._set(config.SPIN_THROTTLE, 1.0)
+        elif command == "spin left":
+            self._set(config.SPIN_THROTTLE, -1.0)
+        elif command == "right":
+            self._set(config.FORWARD_THROTTLE, config.VOICE_TURN_STEERING)
+        elif command == "left":
+            self._set(config.FORWARD_THROTTLE, -config.VOICE_TURN_STEERING)
+        elif command == "stop":
+            self.stop()
+        # Unknown voice command: leave motors in their current state
+        # rather than risk an unsafe default.
+
     def execute(self,
                 gesture: Gesture,
                 target_position: Tuple[float, float],

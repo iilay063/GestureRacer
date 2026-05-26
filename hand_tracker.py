@@ -24,10 +24,12 @@ class Hand:
 
 class HandTracker:
     def __init__(self):
-        # Lazy import: dev laptops without mediapipe can still import other
-        # modules for unit-testing.
-        import mediapipe as mp
-        self._hands = mp.solutions.hands.Hands(
+        # Lazy + explicit submodule import: dev laptops without
+        # mediapipe can still import other modules for unit-testing,
+        # and `import mediapipe as mp` does not reliably populate
+        # mp.solutions on newer wheels (Python 3.12+).
+        from mediapipe.solutions import hands as mp_hands
+        self._hands = mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=config.HAND_MAX_HANDS,
             min_detection_confidence=config.HAND_DETECTION_CONFIDENCE,

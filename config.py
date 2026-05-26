@@ -64,6 +64,47 @@ HAND_SIZE_STOP = 0.5
 HAND_SIZE_FAR = 0.15
 
 # ---------------------------------------------------------------------------
+# Voice control (Vosk, offline)
+# ---------------------------------------------------------------------------
+# Path to the unzipped Vosk model directory. Small English model is
+# enough for our fixed 7-word vocabulary.
+VOICE_MODEL_PATH = "vosk-model-small-en-us-0.15"
+
+# Vosk models are trained at 16 kHz. Don't change unless using a model
+# trained at a different rate.
+VOICE_SAMPLE_RATE = 16000
+
+# After hearing a voice command, ignore gesture input for this long so
+# the spoken command actually takes effect instead of being immediately
+# overridden by a steady hand pose. A new voice command resets the timer.
+VOICE_LATCH_SEC = 3.0
+
+# The full vocabulary. Order doesn't matter; Vosk uses this as a
+# constrained grammar. "[unk]" lets non-matching speech be ignored
+# instead of being force-matched to one of the commands.
+VOICE_COMMANDS = (
+    "forward",
+    "backward",
+    "spin right",
+    "spin left",
+    "right",
+    "left",
+    "stop",
+)
+
+# Minimum per-word confidence (0..1) for a recognized phrase to be
+# accepted as a real command. Constrained-grammar recognizers always
+# force-match to the nearest entry - e.g. "light" gets heard as "right"
+# - but those forced matches usually come with lower confidence.
+# Raise toward 1.0 if false positives still slip through; lower if real
+# commands are being rejected.
+VOICE_MIN_CONFIDENCE = 0.8
+
+# Steering value used for the voice "right" and "left" turn-while-going
+# commands. 0.5 is half-lock; raise toward 1.0 for tighter turns.
+VOICE_TURN_STEERING = 0.5
+
+# ---------------------------------------------------------------------------
 # Safety stop
 # ---------------------------------------------------------------------------
 # Cut motors after this long with no detection of any kind.
