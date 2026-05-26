@@ -64,19 +64,6 @@ HAND_SIZE_STOP = 0.5
 HAND_SIZE_FAR = 0.15
 
 # ---------------------------------------------------------------------------
-# Laser fallback
-# ---------------------------------------------------------------------------
-# Red wraps the hue circle, so we mask two ranges and union them.
-LASER_HSV_LOW_1 = (0, 120, 200)
-LASER_HSV_HIGH_1 = (10, 255, 255)
-LASER_HSV_LOW_2 = (170, 120, 200)
-LASER_HSV_HIGH_2 = (180, 255, 255)
-LASER_MIN_AREA_PX = 5  # the dot is tiny; keep this low
-
-# Switch to laser tracking after this many seconds without a hand.
-HAND_LOST_LASER_SWITCH_SEC = 2.0
-
-# ---------------------------------------------------------------------------
 # Safety stop
 # ---------------------------------------------------------------------------
 # Cut motors after this long with no detection of any kind.

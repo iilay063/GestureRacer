@@ -11,7 +11,6 @@ import numpy as np
 
 from gesture_classifier import Gesture
 from hand_tracker import Hand
-from laser_tracker import Laser
 
 
 class DebugOverlay:
@@ -26,7 +25,6 @@ class DebugOverlay:
              frame: np.ndarray,
              hand: Optional[Hand],
              gesture: Gesture,
-             laser: Optional[Laser],
              fps: float) -> None:
         cv2 = self._cv2
         canvas = frame.copy()
@@ -37,10 +35,6 @@ class DebugOverlay:
                 cv2.circle(canvas, (int(x * w), int(y * h)), 2, (0, 255, 0), -1)
             cx, cy = hand.center
             cv2.circle(canvas, (int(cx * w), int(cy * h)), 5, (0, 255, 255), 2)
-
-        if laser is not None:
-            lx, ly = laser.position
-            cv2.circle(canvas, (int(lx * w), int(ly * h)), 6, (0, 0, 255), 2)
 
         cv2.putText(canvas, f"{gesture.value}  fps={fps:.1f}",
                     (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
